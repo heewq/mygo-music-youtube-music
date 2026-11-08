@@ -403,6 +403,7 @@ export function signOut() {
 // What's kept of a session goes with it.
 function endSession() {
   host.storage.remove("cookie");
+  if (host.writeDataFile) host.removeDataDir("yt-dlp");
   likedSet = null;
 }
 
@@ -854,11 +855,33 @@ function gainOf(audio) {
   return Math.round((-18 - lkfs) * 100) / 100;
 }
 
-// The cookie goes to yt-dlp on its standard input, as anyone on this machine can
-// read the arguments of a program.
-function ytdlpConfig() {
+// What yt-dlp is told of the session, on its standard input, as anyone on this
+// machine can read the arguments of a program, and where it asks for a track.
+// It signs in only with cookies from a file: given as a header, they're sent
+// only to the host of the address, and finding none for youtube.com, yt-dlp
+// asks as a visitor, who can't see what the listener uploaded. That's only at
+// music.youtube.com. An app that writes no files for plugins has the header.
+function ytdlpSession() {
   const c = cookie();
-  return c ? `--add-headers "Cookie:${c.replace(/[\\"]/g, "\\$&")}"\n` : "";
+  if (!c) return { config: "", at: "https://www.youtube.com" };
+  if (!host.writeDataFile) return { config: `--add-headers ${quoted(`Cookie:${c}`)}\n`, at: "https://www.youtube.com" };
+  const file = host.writeDataFile("yt-dlp/cookies.txt", cookieFile(c));
+  return { config: `--cookies ${quoted(file)}\n`, at: site };
+}
+
+// quoted is s as one argument of yt-dlp's configuration.
+const quoted = (s) => `"${s.replace(/[\\"]/g, "\\$&")}"`;
+
+// The session's cookies as a Netscape cookie file, for all of youtube.com.
+function cookieFile(c) {
+  const lines = ["# Netscape HTTP Cookie File"];
+  for (const part of c.split(";")) {
+    const at = part.indexOf("=");
+    if (at < 1) continue;
+    const name = part.slice(0, at).trim();
+    lines.push([".youtube.com", "TRUE", "/", "TRUE", "2147483647", name, part.slice(at + 1).trim()].join("\t"));
+  }
+  return lines.join("\n") + "\n";
 }
 
 const ytdlpTimeout = 25000;
@@ -882,10 +905,11 @@ async function throughYtdlp(id, why) {
       break;
     }
   }
-  args.push(`https://www.youtube.com/watch?v=${id}`);
+  const session = ytdlpSession();
+  args.push(`${session.at}/watch?v=${id}`);
 
   const proc = host.spawn(ytdlp, args);
-  proc.write(ytdlpConfig());
+  proc.write(session.config);
   proc.closeStdin();
   const timer = setTimeout(() => proc.kill(), ytdlpTimeout);
   const lines = [];
@@ -900,14 +924,15 @@ async function throughYtdlp(id, why) {
 // choice works, and the audio alone, as one file. With a session it asks as the
 // embedded player, whose addresses YouTube now turns down with no token from
 // its JavaScript, which yt-dlp can't make. Safari's are good, but only as HLS,
-// with video: at 360p, its audio is the AAC YouTube has on its own.
+// with video: at 360p, its audio is the AAC YouTube has on its own. What the
+// listener uploaded has no HLS, only its audio, as one file.
 function whatYtdlpAsks() {
   if (!cookie()) {
     return ["--extractor-args", "youtube:skip=hls,dash", "--format", "bestaudio[protocol^=http]/bestaudio"];
   }
   return [
     "--extractor-args", "youtube:player_client=web_safari",
-    "--format", "bestaudio[protocol^=m3u8]/93/94/92/95/91",
+    "--format", "bestaudio[protocol^=m3u8]/93/94/92/95/91/bestaudio",
   ];
 }
 
