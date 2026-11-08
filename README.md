@@ -4,13 +4,19 @@ Plays YouTube Music in [MyGo Music](https://github.com/egoist/mygo-music). It is
 
 ## Install
 
-Install [ffmpeg](https://ffmpeg.org), and [yt-dlp](https://github.com/yt-dlp/yt-dlp) as a fallback. On macOS:
+Install [ffmpeg](https://ffmpeg.org), and [yt-dlp](https://github.com/yt-dlp/yt-dlp) as a fallback, with a JavaScript runtime it solves YouTube's challenges with: [Deno](https://deno.com), Node or Bun. On macOS, Homebrew includes Deno with yt-dlp:
 
 ```bash
 brew install ffmpeg yt-dlp
 ```
 
-yt-dlp needs a JavaScript runtime (Deno, Node or Bun) to solve YouTube's challenges; Homebrew includes Deno. Keep yt-dlp up to date, as YouTube changes often.
+On Windows, with [Scoop](https://scoop.sh):
+
+```powershell
+scoop install ffmpeg yt-dlp deno
+```
+
+Keep yt-dlp up to date, as YouTube changes often.
 
 Install with the deeplink:
 
@@ -22,7 +28,7 @@ Or paste the GitHub URL in Settings > Plugins:
 
 In Settings > Plugins, allow YouTube Music to start programs. To get your library, click **Sign In** and sign in to Google in the window that opens.
 
-It needs MyGo Music 0.1.8 or later, and only starts ffmpeg and yt-dlp: from the PATH, `/opt/homebrew/bin` or `/usr/local/bin`. If they're somewhere else, link them into one of those.
+It needs MyGo Music 0.1.8 or later, and only starts ffmpeg, yt-dlp and the first of Deno, Node and Bun it finds: from the PATH, `/opt/homebrew/bin` or `/usr/local/bin`. If they're somewhere else, link them into one of those.
 
 ## Signing in
 
